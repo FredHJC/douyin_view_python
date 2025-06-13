@@ -135,6 +135,8 @@
             text-align: center;
             box-shadow: 0 5px 15px rgba(0,0,0,0.1);
             border: 2px solid #e1e8ed;
+            position: relative;
+            overflow: hidden;
         }
 
         .stat-number {
@@ -142,6 +144,12 @@
             font-weight: bold;
             color: #667eea;
             display: block;
+            transition: all 0.3s ease;
+        }
+
+        .stat-number.updating {
+            transform: scale(1.1);
+            color: #2ecc71;
         }
 
         .stat-label {
@@ -150,12 +158,76 @@
             margin-top: 5px;
         }
 
+        .stat-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            transition: left 0.5s;
+        }
+
+        .stat-card.highlight::after {
+            left: 100%;
+        }
+
+        .stat-increase {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 0.9em;
+            font-weight: bold;
+            color: #27ae60;
+            background: rgba(232, 245, 233, 0.9);
+            padding: 3px 8px;
+            border-radius: 12px;
+            z-index: 10;
+            animation: fade-up-out 2s ease-in-out forwards;
+            pointer-events: none;
+        }
+
+        @keyframes fade-up-out {
+            0% {
+                transform: translateY(0);
+                opacity: 1;
+            }
+            80% {
+                transform: translateY(-15px);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+        }
+
         .video-info {
             background: white;
             padding: 20px;
             border-radius: 10px;
             margin-top: 20px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .video-cover-container {
+            flex-shrink: 0;
+        }
+
+        .video-cover {
+            width: 100px;
+            height: 150px;
+            border-radius: 8px;
+            object-fit: cover;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        .video-details {
+            flex-grow: 1;
         }
 
         .video-title {
@@ -248,6 +320,12 @@
             color: #7f8c8d;
             font-size: 0.9em;
             margin-top: 15px;
+            transition: color 0.5s;
+        }
+
+        .last-updated.fresh {
+            color: #2ecc71;
+            font-weight: 600;
         }
 
         @media (max-width: 768px) {
@@ -288,7 +366,6 @@
                 <button class="btn btn-success" onclick="startTracking()" id="trackBtn" disabled>Start Tracking</button>
                 <button class="btn btn-danger" onclick="stopTracking()" id="stopBtn" disabled>Stop Tracking</button>
                 <button class="btn" onclick="updateVideoStats()" id="manualUpdateBtn" disabled style="background-color: #ff9800;">Manual Update</button>
-                <button class="btn" onclick="forceRefreshNumbers()" id="forceRefreshBtn" disabled style="background-color: #2196f3; color: white;">Force Refresh</button>
                 <button class="btn" onclick="debugDOM()" style="background-color: #9c27b0; color: white;">Debug DOM</button>
                 
                 <div id="videoResult"></div>
@@ -317,20 +394,20 @@
                 <div id="currentVideoInfo"></div>
                 
                 <div class="stats-grid" id="statsGrid">
-                    <div class="stat-card">
-                        <span class="stat-number" id="viewCount">0</span>
+                    <div class="stat-card" id="viewCard">
+                        <span class="stat-number" id="viewCount" data-value="0">0</span>
                         <div class="stat-label">Views</div>
                     </div>
-                    <div class="stat-card">
-                        <span class="stat-number" id="likeCount">0</span>
+                    <div class="stat-card" id="likeCard">
+                        <span class="stat-number" id="likeCount" data-value="0">0</span>
                         <div class="stat-label">Likes</div>
                     </div>
-                    <div class="stat-card">
-                        <span class="stat-number" id="commentCount">0</span>
+                    <div class="stat-card" id="commentCard">
+                        <span class="stat-number" id="commentCount" data-value="0">0</span>
                         <div class="stat-label">Comments</div>
                     </div>
-                    <div class="stat-card">
-                        <span class="stat-number" id="shareCount">0</span>
+                    <div class="stat-card" id="shareCard">
+                        <span class="stat-number" id="shareCount" data-value="0">0</span>
                         <div class="stat-label">Shares</div>
                     </div>
                 </div>
@@ -354,12 +431,16 @@
         let trackingInterval = null;
         let currentVideoUrl = '';
         let currentUserId = '';
+        let currentCoverUrl = '';
+        let previousValues = {
+            views: 0,
+            likes: 0,
+            comments: 0,
+            shares: 0
+        };
 
         function formatNumber(num) {
-            // Convert to number if it's a string
             const number = typeof num === 'string' ? parseInt(num) : num;
-            
-            // Return the full number with commas for readability
             return number.toLocaleString();
         }
 
@@ -401,32 +482,36 @@
                     
                     document.getElementById('videoResult').innerHTML = `
                         <div class="video-info">
-                            <div class="video-title">${info.title || 'No title'}</div>
-                            <div class="video-author">Author: ${info.author || 'Unknown'}</div>
-                            <div class="stats-grid">
-                                <div class="stat-card">
-                                    <span class="stat-number">${formatNumber(info.view_count)}</span>
-                                    <div class="stat-label">Views</div>
-                                </div>
-                                <div class="stat-card">
-                                    <span class="stat-number">${formatNumber(info.like_count)}</span>
-                                    <div class="stat-label">Likes</div>
-                                </div>
-                                <div class="stat-card">
-                                    <span class="stat-number">${formatNumber(info.comment_count)}</span>
-                                    <div class="stat-label">Comments</div>
-                                </div>
-                                <div class="stat-card">
-                                    <span class="stat-number">${formatNumber(info.share_count)}</span>
-                                    <div class="stat-label">Shares</div>
-                                </div>
+                            <div class="video-cover-container">
+                                <img src="${info.cover_url}" alt="Video Cover" class="video-cover">
+                            </div>
+                            <div class="video-details">
+                                <div class="video-title">${info.title || 'No title'}</div>
+                                <div class="video-author">Author: ${info.author || 'Unknown'}</div>
+                            </div>
+                        </div>
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <span class="stat-number">${formatNumber(info.view_count)}</span>
+                                <div class="stat-label">Views</div>
+                            </div>
+                            <div class="stat-card">
+                                <span class="stat-number">${formatNumber(info.like_count)}</span>
+                                <div class="stat-label">Likes</div>
+                            </div>
+                            <div class="stat-card">
+                                <span class="stat-number">${formatNumber(info.comment_count)}</span>
+                                <div class="stat-label">Comments</div>
+                            </div>
+                            <div class="stat-card">
+                                <span class="stat-number">${formatNumber(info.share_count)}</span>
+                                <div class="stat-label">Shares</div>
                             </div>
                         </div>
                     `;
                     
                     document.getElementById('trackBtn').disabled = false;
                     document.getElementById('manualUpdateBtn').disabled = false;
-                    document.getElementById('forceRefreshBtn').disabled = false;
                 } else {
                     showError('videoResult', data.error || 'Failed to fetch video information');
                 }
@@ -528,40 +613,59 @@
 
         async function startTracking() {
             if (!currentVideoUrl) {
-                alert('Please get video info first');
+                alert('No video selected for tracking.');
                 return;
             }
 
+            showLoading('videoResult');
+            
             try {
                 const response = await fetch('/api/track_video', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ video_url: currentVideoUrl })
                 });
 
                 const data = await response.json();
-                
+
                 if (data.success) {
-                    document.getElementById('trackingSection').style.display = 'block';
+                    document.getElementById('videoResult').innerHTML = '';
+                    
+                    const trackingData = data.data;
+                    currentCoverUrl = trackingData.cover_url;
+
+                    const trackingSection = document.getElementById('trackingSection');
+                    trackingSection.style.display = 'block';
+                    
+                    const currentVideoInfoElement = document.getElementById('currentVideoInfo');
+                    if (currentVideoInfoElement) {
+                        currentVideoInfoElement.innerHTML = `
+                            <div class="video-info">
+                                <div class="video-cover-container">
+                                    <img src="${trackingData.cover_url}" alt="Video Cover" class="video-cover">
+                                </div>
+                                <div class="video-details">
+                                    <div class="video-title">${trackingData.title || 'No title'}</div>
+                                    <div class="video-author">Author: ${trackingData.author || 'Unknown'}</div>
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    updateTrackingDisplay(trackingData);
+                    
                     document.getElementById('trackingStatus').className = 'tracking-status tracking-active';
                     document.getElementById('trackingStatus').textContent = 'Active';
+
+                    console.log('🚀 Starting tracking interval (10 second updates)');
+                    trackingInterval = setInterval(() => {
+                        console.log('⏰ Automatic update triggered at:', new Date().toLocaleString());
+                        updateVideoStats();
+                    }, 10000);
                     
-                    updateTrackingDisplay(data.data);
-                    
-                    // Start periodic updates
-                    // Start automatic updates every 10 seconds with enhanced logging
-            console.log('🚀 Starting tracking interval (10 second updates)');
-            trackingInterval = setInterval(() => {
-                console.log('⏰ Automatic update triggered at:', new Date().toLocaleString());
-                updateVideoStats();
-            }, 10000);
-                    
-                                document.getElementById('trackBtn').disabled = true;
-            document.getElementById('stopBtn').disabled = false;
-            document.getElementById('manualUpdateBtn').disabled = false;
-            document.getElementById('forceRefreshBtn').disabled = false;
+                    document.getElementById('trackBtn').disabled = true;
+                    document.getElementById('stopBtn').disabled = false;
+                    document.getElementById('manualUpdateBtn').disabled = false;
                 } else {
                     alert('Failed to start tracking: ' + (data.error || 'Unknown error'));
                 }
@@ -579,93 +683,92 @@
             document.getElementById('trackingStatus').className = 'tracking-status tracking-inactive';
             document.getElementById('trackingStatus').textContent = 'Inactive';
             
-                                document.getElementById('trackBtn').disabled = false;
-                    document.getElementById('stopBtn').disabled = true;
-                    document.getElementById('manualUpdateBtn').disabled = true;
-                    document.getElementById('forceRefreshBtn').disabled = true;
+            document.getElementById('trackBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+            document.getElementById('manualUpdateBtn').disabled = true;
+        }
+
+        function updateStatValue(elementId, cardId, newValue, animate = true) {
+            const element = document.getElementById(elementId);
+            const card = document.getElementById(cardId);
+            
+            if (!element || !card) {
+                console.error(`Element or card not found: ${elementId}, ${cardId}`);
+                return;
+            }
+            
+            const oldValue = parseInt(element.getAttribute('data-value') || '0');
+            const numericNewValue = typeof newValue === 'string' ? parseInt(newValue) : newValue;
+            const difference = numericNewValue - oldValue;
+            
+            console.log(`📊 Updating ${elementId}: ${oldValue} → ${numericNewValue} (Change: ${difference})`);
+            
+            // Always force update the DOM
+            element.setAttribute('data-value', numericNewValue);
+            
+            // Force DOM reflow before updating text
+            element.style.display = 'none';
+            element.offsetHeight; // Trigger reflow
+            element.style.display = 'block';
+            
+            // Update the text content
+            element.textContent = formatNumber(numericNewValue);
+            
+            // Always animate to show update occurred
+            if (animate) {
+                // Remove classes first to reset animation
+                card.classList.remove('highlight');
+                element.classList.remove('updating');
+                
+                // Force reflow
+                void card.offsetWidth;
+                
+                // Add classes back
+                card.classList.add('highlight');
+                element.classList.add('updating');
+
+                // If there's a positive change, show the increase indicator
+                if (difference > 0) {
+                    const increaseIndicator = document.createElement('span');
+                    increaseIndicator.className = 'stat-increase';
+                    increaseIndicator.textContent = `+${difference.toLocaleString()}`;
+                    card.appendChild(increaseIndicator);
+
+                    // The element will be removed by the animation ending, but as a fallback:
+                    setTimeout(() => {
+                        if (increaseIndicator.parentNode) {
+                            increaseIndicator.parentNode.removeChild(increaseIndicator);
+                        }
+                    }, 2000);
+                }
+                
+                setTimeout(() => {
+                    card.classList.remove('highlight');
+                    element.classList.remove('updating');
+                }, 500);
+            }
+            
+            // Log the actual DOM value to verify update
+            console.log(`✅ ${elementId} DOM value: "${element.textContent}"`);
         }
 
         function updateTrackingDisplay(data) {
             console.log('🎯 Updating tracking display with data:', data);
 
-            const currentVideoInfoElement = document.getElementById('currentVideoInfo');
-            if (currentVideoInfoElement) {
-                currentVideoInfoElement.innerHTML = `
-                    <div class="video-info">
-                        <div class="video-title">${data.title || 'No title'}</div>
-                        <div class="video-author">Author: ${data.author || 'Unknown'}</div>
-                    </div>
-                `;
-            }
-
-            forceUpdateStat('viewCount', data.current_view_count || 0, '📊 Views');
-            forceUpdateStat('likeCount', data.like_count || 0, '❤️ Likes');
-            forceUpdateStat('commentCount', data.comment_count || 0, '💬 Comments');
-            forceUpdateStat('shareCount', data.share_count || 0, '📤 Shares');
-
+            updateStatValue('viewCount', 'viewCard', data.current_view_count || 0);
+            updateStatValue('likeCount', 'likeCard', data.like_count || 0);
+            updateStatValue('commentCount', 'commentCard', data.comment_count || 0);
+            updateStatValue('shareCount', 'shareCard', data.share_count || 0);
+            
             const lastUpdatedElement = document.getElementById('lastUpdated');
             if (lastUpdatedElement) {
                 const timestamp = new Date(data.last_updated || new Date()).toLocaleString();
                 lastUpdatedElement.textContent = `Last updated: ${timestamp}`;
-                lastUpdatedElement.style.transition = 'color 0.5s';
-                lastUpdatedElement.style.color = '#2ecc71';
+                lastUpdatedElement.classList.add('fresh');
                 setTimeout(() => {
-                    lastUpdatedElement.style.color = '';
-                }, 1500);
+                    lastUpdatedElement.classList.remove('fresh');
+                }, 2000);
             }
-        }
-
-        function forceUpdateStat(elementId, newValue, label) {
-            const element = document.getElementById(elementId);
-            if (!element) {
-                console.error(`❌ Element ${elementId} not found!`);
-                return;
-            }
-
-            const formattedValue = formatNumber(newValue);
-            const oldValue = element.textContent;
-
-            if (oldValue === formattedValue) {
-                console.log(`✅ ${label}: Value unchanged (${formattedValue})`);
-                return; // No visual update needed if value is the same
-            }
-
-            console.log(`🚀 ${label}: Updating from "${oldValue}" to "${formattedValue}"`);
-
-            // --- Forceful DOM Update ---
-            // 1. Hide the element to force a repaint state change
-            element.style.visibility = 'hidden';
-
-            // 2. Change the value while hidden
-            element.textContent = formattedValue;
-            element.innerHTML = formattedValue;
-
-            // 3. Force browser to process the above changes
-            element.offsetHeight; // This is a classic reflow-triggering trick
-
-            // 4. Make it visible again, with a visual flash
-            element.style.transition = 'none'; // Disable transition for the flash
-            element.style.backgroundColor = '#667eea';
-            element.style.color = 'white';
-            element.style.visibility = 'visible';
-
-
-            // 5. After a short delay, fade back to normal
-            setTimeout(() => {
-                element.style.transition = 'background-color 0.5s, color 0.5s';
-                element.style.backgroundColor = '';
-                element.style.color = '';
-            }, 100);
-
-            // 6. Verify the update
-            setTimeout(() => {
-                const finalValue = document.getElementById(elementId).textContent;
-                if (finalValue === formattedValue) {
-                    console.log(`✔️ ${label}: Verified update to "${finalValue}"`);
-                } else {
-                    console.error(`❌ ${label}: FAILED to verify update. Expected "${formattedValue}", got "${finalValue}"`);
-                }
-            }, 200);
         }
 
         async function updateVideoStats() {
@@ -675,6 +778,7 @@
             }
             
             console.log('🔄 Updating video stats...', currentVideoUrl);
+            console.log('📍 Update started at:', new Date().toLocaleString());
             
             // Show progress indicator
             const progressElement = document.getElementById('updateProgress');
@@ -695,12 +799,19 @@
             }
             
             try {
-                const response = await fetch('/api/get_video_info', {
+                // Add timestamp to prevent caching
+                const timestamp = new Date().getTime();
+                const response = await fetch(`/api/get_video_info?t=${timestamp}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        'Cache-Control': 'no-cache',
+                        'Pragma': 'no-cache'
                     },
-                    body: JSON.stringify({ video_url: currentVideoUrl })
+                    body: JSON.stringify({ 
+                        video_url: currentVideoUrl,
+                        timestamp: timestamp 
+                    })
                 });
 
                 const data = await response.json();
@@ -714,9 +825,11 @@
                 
                 if (data.success && data.video_info) {
                     const info = data.video_info;
+                    
                     const trackingData = {
                         title: info.title,
                         author: info.author,
+                        cover_url: currentCoverUrl,
                         current_view_count: info.view_count,
                         like_count: info.like_count,
                         comment_count: info.comment_count,
@@ -725,6 +838,10 @@
                     };
                     
                     console.log('📈 Updating display with:', trackingData);
+                    console.log('🔢 Values - Views:', trackingData.current_view_count, 
+                               'Likes:', trackingData.like_count,
+                               'Comments:', trackingData.comment_count,
+                               'Shares:', trackingData.share_count);
                     
                     // Update progress
                     if (progressBar) {
@@ -815,6 +932,7 @@
                     const style = getComputedStyle(element);
                     console.log(`--- Element: #${id} ---`);
                     console.log(`  - Text Content: "${element.textContent}"`);
+                    console.log(`  - Data Value: "${element.getAttribute('data-value')}"`);
                     console.log(`  - Display: ${style.display}`);
                     console.log(`  - Visibility: ${style.visibility}`);
                     console.log(`  - Opacity: ${style.opacity}`);
@@ -836,35 +954,7 @@
             };
             
             updateTrackingDisplay(fakeData);
-        }
-
-        function forceRefreshNumbers() {
-            console.log('🔄 Force refreshing all numbers...');
-            
-            // Get current values and force re-render
-            const elements = ['viewCount', 'likeCount', 'commentCount', 'shareCount'];
-            elements.forEach(id => {
-                const element = document.getElementById(id);
-                if (element) {
-                    const currentValue = element.textContent;
-                    console.log(`🔄 Force refreshing ${id}: ${currentValue}`);
-                    
-                    // Clear and re-set
-                    element.textContent = '';
-                    element.innerHTML = '';
-                    element.offsetHeight; // Force reflow
-                    
-                    element.textContent = currentValue;
-                    element.innerHTML = currentValue;
-                    
-                    // Add visual feedback
-                    element.style.backgroundColor = '#fff3cd';
-                    element.style.transition = 'background-color 0.5s';
-                    setTimeout(() => {
-                        element.style.backgroundColor = '';
-                    }, 1000);
-                }
-            });
+            console.log('✅ Debug test complete - check if numbers updated');
         }
 
         // Stop tracking when page is closed
@@ -875,4 +965,4 @@
         });
     </script>
 </body>
-</html> 
+</html>

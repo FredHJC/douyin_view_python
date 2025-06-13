@@ -257,7 +257,16 @@ class TikHubAPIClient:
             video_info = video_data.get('video', {})
             play_addr = video_info.get('play_addr', {})
             video_urls = play_addr.get('url_list', [])
-            
+
+            # Extract cover URL, preferring dynamic_cover over cover
+            dynamic_cover_urls = video_info.get('dynamic_cover', {}).get('url_list', [])
+            static_cover_urls = video_info.get('cover', {}).get('url_list', [])
+            cover_url = ""
+            if dynamic_cover_urls:
+                cover_url = dynamic_cover_urls[0]
+            elif static_cover_urls:
+                cover_url = static_cover_urls[0]
+
             return {
                 'success': True,
                 'data': {
@@ -273,7 +282,7 @@ class TikHubAPIClient:
                     },
                     'statistics': stats,
                     'video_urls': video_urls,
-                    'cover_url': video_info.get('cover', {}).get('url_list', [''])[0] if video_info.get('cover') else '',
+                    'cover_url': cover_url,
                     'music': {
                         'title': video_data.get('music', {}).get('title', ''),
                         'author': video_data.get('music', {}).get('author', ''),
@@ -389,6 +398,7 @@ def track_video():
                 'aweme_id': video_data['aweme_id'],
                 'title': video_data['desc'],
                 'author': video_data['author']['nickname'],
+                'cover_url': video_data.get('cover_url', ''),
                 'initial_view_count': video_data['statistics']['play_count'],
                 'current_view_count': video_data['statistics']['play_count'],
                 'like_count': video_data['statistics']['digg_count'],
