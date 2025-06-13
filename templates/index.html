@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Douyin View Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .section {
+            margin-bottom: 40px;
+            padding: 30px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            border-left: 5px solid #667eea;
+        }
+
+        .section h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #34495e;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e1e8ed;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border: 2px solid #e1e8ed;
+        }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+            display: block;
+        }
+
+        .stat-label {
+            color: #7f8c8d;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+
+        .video-info {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .video-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .video-author {
+            color: #7f8c8d;
+            margin-bottom: 15px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #7f8c8d;
+        }
+
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 5px solid #f44336;
+            margin-top: 15px;
+        }
+
+        .success {
+            background: #e8f5e8;
+            color: #2e7d32;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 5px solid #4caf50;
+            margin-top: 15px;
+        }
+
+        .tracking-status {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .tracking-active {
+            background: #e8f5e8;
+            color: #2e7d32;
+            animation: pulse 2s infinite ease-in-out;
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(46, 125, 50, 0.4);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(46, 125, 50, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(46, 125, 50, 0);
+            }
+        }
+
+        .tracking-inactive {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .last-updated {
+            text-align: right;
+            color: #7f8c8d;
+            font-size: 0.9em;
+            margin-top: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                padding: 20px;
+            }
+            
+            .header {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎵 Douyin View Tracker</h1>
+            <p>Monitor real-time view counts for Douyin videos</p>
+        </div>
+
+        <div class="content">
+            <!-- Video URL Input Section -->
+            <div class="section">
+                <h2>📹 Track Video Views</h2>
+                <div class="input-group">
+                    <label for="videoUrl">Douyin Video URL:</label>
+                    <input type="text" id="videoUrl" placeholder="Enter Douyin video URL (e.g., https://v.douyin.com/...)" />
+                </div>
+                <button class="btn" onclick="getVideoInfo()">Get Video Info</button>
+                <button class="btn btn-success" onclick="startTracking()" id="trackBtn" disabled>Start Tracking</button>
+                <button class="btn btn-danger" onclick="stopTracking()" id="stopBtn" disabled>Stop Tracking</button>
+                <button class="btn" onclick="updateVideoStats()" id="manualUpdateBtn" disabled style="background-color: #ff9800;">Manual Update</button>
+                <button class="btn" onclick="forceRefreshNumbers()" id="forceRefreshBtn" disabled style="background-color: #2196f3; color: white;">Force Refresh</button>
+                <button class="btn" onclick="debugDOM()" style="background-color: #9c27b0; color: white;">Debug DOM</button>
+                
+                <div id="videoResult"></div>
+            </div>
+
+            <!-- User Search Section -->
+            <div class="section">
+                <h2>👤 Search User</h2>
+                <div class="input-group">
+                    <label for="userId">Sec User ID:</label>
+                    <input type="text" id="userId" placeholder="Enter Douyin sec_user_id (e.g., MS4wLjABAAAAhZxp015xL6y5KVIccX0xERirhZMEteLvl5lCM6XaiOk)" />
+                </div>
+                <button class="btn" onclick="searchUser()">Search User</button>
+                <button class="btn" onclick="getUserVideos()" id="getVideosBtn" disabled>Get User Videos</button>
+                
+                <div id="userResult"></div>
+            </div>
+
+            <!-- Real-time Tracking Display -->
+            <div class="section" id="trackingSection" style="display: none;">
+                <h2>📊 Real-time Tracking 
+                    <span class="tracking-status tracking-inactive" id="trackingStatus">Inactive</span>
+                    <span id="updateStatus" style="margin-left: 10px; font-size: 0.8em; color: #666;"></span>
+                </h2>
+                
+                <div id="currentVideoInfo"></div>
+                
+                <div class="stats-grid" id="statsGrid">
+                    <div class="stat-card">
+                        <span class="stat-number" id="viewCount">0</span>
+                        <div class="stat-label">Views</div>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number" id="likeCount">0</span>
+                        <div class="stat-label">Likes</div>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number" id="commentCount">0</span>
+                        <div class="stat-label">Comments</div>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number" id="shareCount">0</span>
+                        <div class="stat-label">Shares</div>
+                    </div>
+                </div>
+                
+                <div class="last-updated" id="lastUpdated"></div>
+                
+                <!-- Update Progress Indicator -->
+                <div id="updateProgress" style="display: none; text-align: center; margin-top: 10px;">
+                    <div style="display: inline-block; padding: 8px 16px; background: #e3f2fd; border-radius: 20px; color: #1976d2; font-size: 0.9em;">
+                        <span id="progressText">🔄 Updating...</span>
+                        <div style="width: 100px; height: 4px; background: #bbdefb; border-radius: 2px; margin: 5px auto; overflow: hidden;">
+                            <div id="progressBar" style="width: 0%; height: 100%; background: #2196f3; border-radius: 2px; transition: width 0.3s;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let trackingInterval = null;
+        let currentVideoUrl = '';
+        let currentUserId = '';
+
+        function formatNumber(num) {
+            // Convert to number if it's a string
+            const number = typeof num === 'string' ? parseInt(num) : num;
+            
+            // Return the full number with commas for readability
+            return number.toLocaleString();
+        }
+
+        function showLoading(elementId) {
+            document.getElementById(elementId).innerHTML = '<div class="loading">Loading...</div>';
+        }
+
+        function showError(elementId, message) {
+            document.getElementById(elementId).innerHTML = `<div class="error">Error: ${message}</div>`;
+        }
+
+        function showSuccess(elementId, message) {
+            document.getElementById(elementId).innerHTML = `<div class="success">${message}</div>`;
+        }
+
+        async function getVideoInfo() {
+            const videoUrl = document.getElementById('videoUrl').value.trim();
+            if (!videoUrl) {
+                alert('Please enter a video URL');
+                return;
+            }
+
+            showLoading('videoResult');
+            
+            try {
+                const response = await fetch('/api/get_video_info', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ video_url: videoUrl })
+                });
+
+                const data = await response.json();
+                
+                if (data.success && data.video_info) {
+                    const info = data.video_info;
+                    currentVideoUrl = videoUrl;
+                    
+                    document.getElementById('videoResult').innerHTML = `
+                        <div class="video-info">
+                            <div class="video-title">${info.title || 'No title'}</div>
+                            <div class="video-author">Author: ${info.author || 'Unknown'}</div>
+                            <div class="stats-grid">
+                                <div class="stat-card">
+                                    <span class="stat-number">${formatNumber(info.view_count)}</span>
+                                    <div class="stat-label">Views</div>
+                                </div>
+                                <div class="stat-card">
+                                    <span class="stat-number">${formatNumber(info.like_count)}</span>
+                                    <div class="stat-label">Likes</div>
+                                </div>
+                                <div class="stat-card">
+                                    <span class="stat-number">${formatNumber(info.comment_count)}</span>
+                                    <div class="stat-label">Comments</div>
+                                </div>
+                                <div class="stat-card">
+                                    <span class="stat-number">${formatNumber(info.share_count)}</span>
+                                    <div class="stat-label">Shares</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    document.getElementById('trackBtn').disabled = false;
+                    document.getElementById('manualUpdateBtn').disabled = false;
+                    document.getElementById('forceRefreshBtn').disabled = false;
+                } else {
+                    showError('videoResult', data.error || 'Failed to fetch video information');
+                }
+            } catch (error) {
+                showError('videoResult', 'Network error: ' + error.message);
+            }
+        }
+
+        async function searchUser() {
+            const userId = document.getElementById('userId').value.trim();
+            if (!userId) {
+                alert('Please enter a sec_user_id');
+                return;
+            }
+
+            showLoading('userResult');
+            
+            try {
+                const response = await fetch('/api/search_user', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ sec_user_id: userId })
+                });
+
+                const data = await response.json();
+                
+                if (data.success && data.data) {
+                    const user = data.data;
+                    currentUserId = userId;
+                    
+                    document.getElementById('userResult').innerHTML = `
+                        <div class="video-info">
+                            <div class="video-title">${user.nickname || 'Unknown'}</div>
+                            <div class="video-author">Unique ID: ${user.unique_id || 'N/A'}</div>
+                            <div class="video-author">Sec UID: ${user.sec_uid || userId}</div>
+                            <div class="video-author">Followers: ${formatNumber(user.follower_count || 0)}</div>
+                            <div class="video-author">Following: ${formatNumber(user.following_count || 0)}</div>
+                            <div class="video-author">Total Videos: ${formatNumber(user.aweme_count || 0)}</div>
+                            <div class="video-author">Total Likes: ${formatNumber(user.total_favorited || 0)}</div>
+                            ${user.ip_location ? `<div class="video-author">${user.ip_location}</div>` : ''}
+                            <div class="video-author">Signature: ${user.signature || 'N/A'}</div>
+                        </div>
+                    `;
+                    
+                    document.getElementById('getVideosBtn').disabled = false;
+                } else {
+                    showError('userResult', data.error || 'User not found');
+                }
+            } catch (error) {
+                showError('userResult', 'Network error: ' + error.message);
+            }
+        }
+
+        async function getUserVideos() {
+            if (!currentUserId) {
+                alert('Please search for a user first');
+                return;
+            }
+
+            showLoading('userResult');
+            
+            try {
+                const response = await fetch('/api/get_user_videos', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ user_id: currentUserId, count: 10 })
+                });
+
+                const data = await response.json();
+                
+                if (data.data && data.data.aweme_list) {
+                    const videos = data.data.aweme_list;
+                    let videosHtml = '<div class="video-info"><h3>Recent Videos:</h3>';
+                    
+                    videos.forEach((video, index) => {
+                        const stats = video.statistics || {};
+                        videosHtml += `
+                            <div style="border-bottom: 1px solid #eee; padding: 15px 0; ${index === videos.length - 1 ? 'border-bottom: none;' : ''}">
+                                <div class="video-title">${video.desc || 'No title'}</div>
+                                <div class="video-author">Views: ${formatNumber(stats.play_count || 0)} | Likes: ${formatNumber(stats.digg_count || 0)}</div>
+                                <div class="video-author">Video URL: <a href="${video.share_url || '#'}" target="_blank" rel="noopener">${video.share_url || 'N/A'}</a></div>
+                            </div>
+                        `;
+                    });
+                    
+                    videosHtml += '</div>';
+                    document.getElementById('userResult').innerHTML = videosHtml;
+                } else {
+                    showError('userResult', data.error || 'No videos found');
+                }
+            } catch (error) {
+                showError('userResult', 'Network error: ' + error.message);
+            }
+        }
+
+        async function startTracking() {
+            if (!currentVideoUrl) {
+                alert('Please get video info first');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/track_video', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ video_url: currentVideoUrl })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('trackingSection').style.display = 'block';
+                    document.getElementById('trackingStatus').className = 'tracking-status tracking-active';
+                    document.getElementById('trackingStatus').textContent = 'Active';
+                    
+                    updateTrackingDisplay(data.data);
+                    
+                    // Start periodic updates
+                    // Start automatic updates every 10 seconds with enhanced logging
+            console.log('🚀 Starting tracking interval (10 second updates)');
+            trackingInterval = setInterval(() => {
+                console.log('⏰ Automatic update triggered at:', new Date().toLocaleString());
+                updateVideoStats();
+            }, 10000);
+                    
+                                document.getElementById('trackBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            document.getElementById('manualUpdateBtn').disabled = false;
+            document.getElementById('forceRefreshBtn').disabled = false;
+                } else {
+                    alert('Failed to start tracking: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                alert('Network error: ' + error.message);
+            }
+        }
+
+        function stopTracking() {
+            if (trackingInterval) {
+                clearInterval(trackingInterval);
+                trackingInterval = null;
+            }
+            
+            document.getElementById('trackingStatus').className = 'tracking-status tracking-inactive';
+            document.getElementById('trackingStatus').textContent = 'Inactive';
+            
+                                document.getElementById('trackBtn').disabled = false;
+                    document.getElementById('stopBtn').disabled = true;
+                    document.getElementById('manualUpdateBtn').disabled = true;
+                    document.getElementById('forceRefreshBtn').disabled = true;
+        }
+
+        function updateTrackingDisplay(data) {
+            console.log('🎯 Updating tracking display with data:', data);
+
+            const currentVideoInfoElement = document.getElementById('currentVideoInfo');
+            if (currentVideoInfoElement) {
+                currentVideoInfoElement.innerHTML = `
+                    <div class="video-info">
+                        <div class="video-title">${data.title || 'No title'}</div>
+                        <div class="video-author">Author: ${data.author || 'Unknown'}</div>
+                    </div>
+                `;
+            }
+
+            forceUpdateStat('viewCount', data.current_view_count || 0, '📊 Views');
+            forceUpdateStat('likeCount', data.like_count || 0, '❤️ Likes');
+            forceUpdateStat('commentCount', data.comment_count || 0, '💬 Comments');
+            forceUpdateStat('shareCount', data.share_count || 0, '📤 Shares');
+
+            const lastUpdatedElement = document.getElementById('lastUpdated');
+            if (lastUpdatedElement) {
+                const timestamp = new Date(data.last_updated || new Date()).toLocaleString();
+                lastUpdatedElement.textContent = `Last updated: ${timestamp}`;
+                lastUpdatedElement.style.transition = 'color 0.5s';
+                lastUpdatedElement.style.color = '#2ecc71';
+                setTimeout(() => {
+                    lastUpdatedElement.style.color = '';
+                }, 1500);
+            }
+        }
+
+        function forceUpdateStat(elementId, newValue, label) {
+            const element = document.getElementById(elementId);
+            if (!element) {
+                console.error(`❌ Element ${elementId} not found!`);
+                return;
+            }
+
+            const formattedValue = formatNumber(newValue);
+            const oldValue = element.textContent;
+
+            if (oldValue === formattedValue) {
+                console.log(`✅ ${label}: Value unchanged (${formattedValue})`);
+                return; // No visual update needed if value is the same
+            }
+
+            console.log(`🚀 ${label}: Updating from "${oldValue}" to "${formattedValue}"`);
+
+            // --- Forceful DOM Update ---
+            // 1. Hide the element to force a repaint state change
+            element.style.visibility = 'hidden';
+
+            // 2. Change the value while hidden
+            element.textContent = formattedValue;
+            element.innerHTML = formattedValue;
+
+            // 3. Force browser to process the above changes
+            element.offsetHeight; // This is a classic reflow-triggering trick
+
+            // 4. Make it visible again, with a visual flash
+            element.style.transition = 'none'; // Disable transition for the flash
+            element.style.backgroundColor = '#667eea';
+            element.style.color = 'white';
+            element.style.visibility = 'visible';
+
+
+            // 5. After a short delay, fade back to normal
+            setTimeout(() => {
+                element.style.transition = 'background-color 0.5s, color 0.5s';
+                element.style.backgroundColor = '';
+                element.style.color = '';
+            }, 100);
+
+            // 6. Verify the update
+            setTimeout(() => {
+                const finalValue = document.getElementById(elementId).textContent;
+                if (finalValue === formattedValue) {
+                    console.log(`✔️ ${label}: Verified update to "${finalValue}"`);
+                } else {
+                    console.error(`❌ ${label}: FAILED to verify update. Expected "${formattedValue}", got "${finalValue}"`);
+                }
+            }, 200);
+        }
+
+        async function updateVideoStats() {
+            if (!currentVideoUrl) {
+                console.log('❌ No current video URL');
+                return;
+            }
+            
+            console.log('🔄 Updating video stats...', currentVideoUrl);
+            
+            // Show progress indicator
+            const progressElement = document.getElementById('updateProgress');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            
+            if (progressElement) {
+                progressElement.style.display = 'block';
+                progressText.textContent = '🔄 Fetching data...';
+                progressBar.style.width = '20%';
+            }
+            
+            // Show update status
+            const updateStatusElement = document.getElementById('updateStatus');
+            if (updateStatusElement) {
+                updateStatusElement.textContent = '🔄 Updating...';
+                updateStatusElement.style.color = '#ff9800';
+            }
+            
+            try {
+                const response = await fetch('/api/get_video_info', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ video_url: currentVideoUrl })
+                });
+
+                const data = await response.json();
+                console.log('📊 Received data:', data);
+                
+                // Update progress
+                if (progressBar) {
+                    progressText.textContent = '📊 Processing data...';
+                    progressBar.style.width = '60%';
+                }
+                
+                if (data.success && data.video_info) {
+                    const info = data.video_info;
+                    const trackingData = {
+                        title: info.title,
+                        author: info.author,
+                        current_view_count: info.view_count,
+                        like_count: info.like_count,
+                        comment_count: info.comment_count,
+                        share_count: info.share_count,
+                        last_updated: new Date().toISOString()
+                    };
+                    
+                    console.log('📈 Updating display with:', trackingData);
+                    
+                    // Update progress
+                    if (progressBar) {
+                        progressText.textContent = '✨ Updating display...';
+                        progressBar.style.width = '90%';
+                    }
+                    
+                    updateTrackingDisplay(trackingData);
+                    
+                    // Complete progress
+                    if (progressBar) {
+                        progressText.textContent = '✅ Complete!';
+                        progressBar.style.width = '100%';
+                        setTimeout(() => {
+                            if (progressElement) {
+                                progressElement.style.display = 'none';
+                                progressBar.style.width = '0%';
+                            }
+                        }, 1500);
+                    }
+                    
+                    // Show success status
+                    if (updateStatusElement) {
+                        updateStatusElement.textContent = '✅ Updated';
+                        updateStatusElement.style.color = '#4caf50';
+                        setTimeout(() => {
+                            updateStatusElement.textContent = '';
+                        }, 2000);
+                    }
+                } else {
+                    console.error('❌ Failed to get video info:', data);
+                    
+                    // Show error in progress
+                    if (progressBar) {
+                        progressText.textContent = '❌ Failed';
+                        progressBar.style.width = '100%';
+                        progressBar.style.background = '#f44336';
+                        setTimeout(() => {
+                            if (progressElement) {
+                                progressElement.style.display = 'none';
+                                progressBar.style.width = '0%';
+                                progressBar.style.background = '#2196f3';
+                            }
+                        }, 2000);
+                    }
+                    
+                    if (updateStatusElement) {
+                        updateStatusElement.textContent = '❌ Failed';
+                        updateStatusElement.style.color = '#f44336';
+                    }
+                }
+            } catch (error) {
+                console.error('❌ Error updating video stats:', error);
+                
+                // Show error in progress
+                if (progressBar) {
+                    progressText.textContent = '❌ Network Error';
+                    progressBar.style.width = '100%';
+                    progressBar.style.background = '#f44336';
+                    setTimeout(() => {
+                        if (progressElement) {
+                            progressElement.style.display = 'none';
+                            progressBar.style.width = '0%';
+                            progressBar.style.background = '#2196f3';
+                        }
+                    }, 2000);
+                }
+                
+                if (updateStatusElement) {
+                    updateStatusElement.textContent = '❌ Error';
+                    updateStatusElement.style.color = '#f44336';
+                }
+            }
+        }
+
+        function debugDOM() {
+            console.log('--- 🔍 DOM DEBUG INFORMATION 🔍 ---');
+            console.log('Current video URL:', currentVideoUrl);
+            console.log('Tracking interval active:', trackingInterval !== null);
+            
+            const trackingSection = document.getElementById('trackingSection');
+            console.log('Tracking Section Visible:', trackingSection ? getComputedStyle(trackingSection).display : 'Not Found');
+            
+            const statElements = ['viewCount', 'likeCount', 'commentCount', 'shareCount'];
+            statElements.forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    const style = getComputedStyle(element);
+                    console.log(`--- Element: #${id} ---`);
+                    console.log(`  - Text Content: "${element.textContent}"`);
+                    console.log(`  - Display: ${style.display}`);
+                    console.log(`  - Visibility: ${style.visibility}`);
+                    console.log(`  - Opacity: ${style.opacity}`);
+                    console.log(`  - Client Rect:`, element.getBoundingClientRect());
+                } else {
+                    console.log(`❌ Element #${id} NOT FOUND IN DOM`);
+                }
+            });
+            
+            console.log('🧪 Testing with fake data...');
+            const fakeData = {
+                title: 'Test Video - Debug Mode',
+                author: 'Debug Author',
+                current_view_count: Math.floor(Math.random() * 1000000) + 100000,
+                like_count: Math.floor(Math.random() * 100000) + 10000,
+                comment_count: Math.floor(Math.random() * 10000) + 1000,
+                share_count: Math.floor(Math.random() * 5000) + 500,
+                last_updated: new Date().toISOString()
+            };
+            
+            updateTrackingDisplay(fakeData);
+        }
+
+        function forceRefreshNumbers() {
+            console.log('🔄 Force refreshing all numbers...');
+            
+            // Get current values and force re-render
+            const elements = ['viewCount', 'likeCount', 'commentCount', 'shareCount'];
+            elements.forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    const currentValue = element.textContent;
+                    console.log(`🔄 Force refreshing ${id}: ${currentValue}`);
+                    
+                    // Clear and re-set
+                    element.textContent = '';
+                    element.innerHTML = '';
+                    element.offsetHeight; // Force reflow
+                    
+                    element.textContent = currentValue;
+                    element.innerHTML = currentValue;
+                    
+                    // Add visual feedback
+                    element.style.backgroundColor = '#fff3cd';
+                    element.style.transition = 'background-color 0.5s';
+                    setTimeout(() => {
+                        element.style.backgroundColor = '';
+                    }, 1000);
+                }
+            });
+        }
+
+        // Stop tracking when page is closed
+        window.addEventListener('beforeunload', function() {
+            if (trackingInterval) {
+                stopTracking();
+            }
+        });
+    </script>
+</body>
+</html> 
